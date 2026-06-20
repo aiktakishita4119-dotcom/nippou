@@ -7,7 +7,7 @@ export type CalendarEvent = {
   description?: string;
 };
 
-export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
+export async function fetchTodayEvents(startHour?: number, endHour?: number): Promise<CalendarEvent[]> {
   const serviceAccountJson = Buffer.from(
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON!,
     'base64'
@@ -39,10 +39,21 @@ export async function fetchTodayEvents(): Promise<CalendarEvent[]> {
 
   const items = response.data.items || [];
 
-  return items.map((item) => ({
+  let events = items.map((item) => ({
     summary: item.summary || '(無題)',
     start: item.start?.dateTime || item.start?.date || '',
     end: item.end?.dateTime || item.end?.date || '',
     description: item.description || undefined,
   }));
+
+  // Filter events by time range if provided
+  if (startHour !== undefined && endHour !== undefined) {
+    events = events.filter((event) => {
+      const startTime = new Date(event.start);
+      const hour = startTime.getHours();
+      return hour >= startHour && hour < endHour;
+    });
+  }
+
+  return events;
 }
